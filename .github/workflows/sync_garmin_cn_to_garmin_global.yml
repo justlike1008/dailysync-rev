@@ -3,13 +3,14 @@ name: Garmin Smart Real-Time Sync
 on:
   workflow_dispatch:
   schedule:
-    # 每 15 分钟检查一次
+    # 每 15 分钟触发
     - cron: "*/15 * * * *"
   push:
     branches:
       - main
 
 env:
+  # 保留账户信息，确保 CN -> Global 同步
   RQ_COOKIE: ${{ secrets.RQ_COOKIE }}
   RQ_CSRF_TOKEN: ${{ secrets.RQ_CSRF_TOKEN }}
   RQ_USERID: ${{ secrets.RQ_USERID }}
@@ -41,15 +42,17 @@ jobs:
       # 3️⃣ 安装依赖
       - run: yarn
 
-      # 4️⃣ 获取最新活动 ID（先用模拟，保证 workflow 不报错）
+      # 4️⃣ 获取最新活动 ID（数字模拟）
       - name: Fetch latest activity (simulated)
         run: |
-          echo "Latest activity ID: $(date +%s)" > latest.txt
+          # ⚠️ 这里用时间戳模拟最新活动 ID，保证数字格式
+          date +%s > latest.txt
 
-      # 5️⃣ 判断是否有新活动（修复 shell 错误）
+      # 5️⃣ 判断是否有新活动
       - name: Check new activity
         id: check
         run: |
+          # ✅ 修复了 || 大小写错误
           OLD=$(cat .last_activity 2>/dev/null || echo "none")
           NEW=$(cat latest.txt)
 
