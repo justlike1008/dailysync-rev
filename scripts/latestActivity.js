@@ -1,8 +1,10 @@
 const fs = require("fs");
 const path = require("path");
-const GarminConnect = require("garmin-connect");
+const GarminConnect = require("@gooin/garmin-connect").default;
 
 const SESSION_FILE = path.join(__dirname, "..", ".garmin_session.json");
+const LAST_FILE = path.join(__dirname, "..", ".last_activity");
+const LATEST_FILE = path.join(process.cwd(), "latest.txt");
 
 async function main() {
   try {
@@ -11,10 +13,8 @@ async function main() {
 
     if (!username || !password) throw new Error("请设置 GARMIN_USERNAME 和 GARMIN_PASSWORD");
 
-    // ⚠️ 直接调用函数，不用 new
-    const client = GarminConnect({ username, password });
+    const client = new GarminConnect({ username, password });
 
-    // 尝试加载 session
     if (fs.existsSync(SESSION_FILE)) {
       const sessionData = JSON.parse(fs.readFileSync(SESSION_FILE, "utf-8"));
       client.setCookies(sessionData.cookies);
@@ -22,7 +22,7 @@ async function main() {
     }
 
     await client.login();
-    console.log("Garmin CN login success");
+    console.log("Garmin login success");
 
     fs.writeFileSync(SESSION_FILE, JSON.stringify({ cookies: client.cookies }));
     console.log("Garmin session cached");
@@ -31,10 +31,15 @@ async function main() {
     if (!activities || activities.length === 0) process.exit(0);
 
     const latestId = activities[0].activityId;
-
-    const filePath = path.join(process.cwd(), "latest.txt");
-    fs.writeFileSync(filePath, latestId.toString());
+    fs.writeFileSync(LATEST_FILE, latestId.toString());
     console.log(`Latest activity ID: ${latestId}`);
+
+    // 首次运行自动生成 .last_activity 文件
+    if (!fs.existsSync(LAST_FILE)) {
+      fs.writeFileSync(LAST_FILE, latestId.toString());
+      console.log(".last_activity 文件首次生成完成");
+    }
+
   } catch (err) {
     console.error("Error fetching latest activity:", err.message);
     process.exit(1);
