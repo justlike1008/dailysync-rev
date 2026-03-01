@@ -1,9 +1,10 @@
-name: Garmin Smart Real-Time Sync
+name: Sync Garmin CN to Garmin Global
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/15 * * * *"
+    # 每天北京时间早上 8 点
+    - cron: "0 0 * * *"
   push:
     branches:
       - main
@@ -22,52 +23,20 @@ env:
   GARMIN_GLOBAL_PASSWORD: ${{ secrets.GARMIN_GLOBAL_PASSWORD }}
 
 jobs:
-  smart-sync:
+  build:
     runs-on: ubuntu-latest
+    name: Sync Garmin CN to Garmin Global
     permissions:
       contents: write
-
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
-          node-version: "18"
-          cache: yarn
-
-      - name: Install dependencies
-        run: yarn
-
-      - name: Fetch latest activity
-        run: node scripts/latestActivity.js > latest.txt
-
-      - name: Check new activity
-        id: check
-        run: |
-          OLD=$(cat .last_activity 2>/dev/null || echo "none")
-          NEW=$(cat latest.txt)
-
-          echo "OLD=$OLD"
-          echo "NEW=$NEW"
-
-          if [ "$OLD" = "$NEW" ]; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "$NEW" > .last_activity
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Sync Garmin
-        if: steps.check.outputs.changed == 'true'
-        run: yarn sync_cn
-
-      - name: Commit new activity
-        if: steps.check.outputs.changed == 'true'
-        uses: stefanzweifel/git-auto-commit-action@v5
+          node-version: '18'
+          cache: 'yarn'
+      - run: yarn
+      - run: yarn sync_cn
+        timeout-minutes: 5
+      - uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "New Garmin activity synced"
-
-      - name: Bark notify
-        if: steps.check.outputs.changed == 'true'
-        run: |
-          curl -s "https://api.day.app/${BARK_KEY}/发现新运动/已自动同步🏃"
+          commit_message: Save Garmin Session
