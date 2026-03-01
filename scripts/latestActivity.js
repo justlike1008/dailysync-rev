@@ -1,13 +1,13 @@
 // scripts/latestActivity.js
-// 功能：获取 Garmin CN 最近一条运动 ID，并输出到 latest.txt
+// 功能：获取 Garmin CN 最近一条运动 ID，输出数字到 latest.txt
+// 注意：使用环境变量 GARMIN_USERNAME 和 GARMIN_PASSWORD 登录
 
 import fs from "fs";
 import path from "path";
-import GarminConnect from "garmin-connect"; // 社区版 Node.js 客户端
+import GarminConnect from "garmin-connect"; // npm install garmin-connect
 
 async function main() {
   try {
-    // 从环境变量读取账号密码
     const username = process.env.GARMIN_USERNAME;
     const password = process.env.GARMIN_PASSWORD;
 
@@ -15,10 +15,10 @@ async function main() {
       throw new Error("请设置 GARMIN_USERNAME 和 GARMIN_PASSWORD 环境变量");
     }
 
-    // 初始化客户端
+    // 初始化 Garmin 客户端
     const client = new GarminConnect({ username, password });
-    await client.login(); // 登录 Garmin
-    console.log("Garmin login success");
+    await client.login();
+    console.log("Garmin CN login success");
 
     // 获取最近一条活动，limit=1
     const activities = await client.getActivities(0, 1);
@@ -29,9 +29,9 @@ async function main() {
     }
 
     const latest = activities[0];
-    const latestId = latest.activityId;
+    const latestId = latest.activityId; // 数字 ID
 
-    // 写入 latest.txt 文件
+    // 写入 latest.txt
     const filePath = path.join(__dirname, "..", "latest.txt");
     fs.writeFileSync(filePath, latestId.toString());
 
