@@ -1,35 +1,45 @@
 // scripts/latestActivity.js
-// 功能：获取 Garmin CN 最近一条运动 ID，输出到 latest.txt
-// 注意：此版本使用环境变量 GARMIN_USERNAME 和 GARMIN_PASSWORD 登录
+// 功能：获取 Garmin CN 最近一条运动 ID，并输出到 latest.txt
 
-const fs = require('fs');
-const path = require('path');
-const axios = require('axios'); // 需要在项目里安装 axios
+import fs from "fs";
+import path from "path";
+import GarminConnect from "garmin-connect"; // 社区版 Node.js 客户端
 
-// 从环境变量读取账号信息
-const username = process.env.GARMIN_USERNAME;
-const password = process.env.GARMIN_PASSWORD;
-
-if (!username || !password) {
-  console.error("请设置 GARMIN_USERNAME 和 GARMIN_PASSWORD 环境变量");
-  process.exit(1);
-}
-
-// 这里用一个简化的方式模拟登录 Garmin
-// 正式项目中可以用 garmin-connect 包登录获取最新活动
-async function fetchLatestActivityId() {
+async function main() {
   try {
-    // TODO: 替换成真实 Garmin API 调用
-    // 这里暂时返回时间戳模拟最新活动
-    const latestActivityId = Date.now();
+    // 从环境变量读取账号密码
+    const username = process.env.GARMIN_USERNAME;
+    const password = process.env.GARMIN_PASSWORD;
 
-    const filePath = path.join(__dirname, '..', 'latest.txt');
-    fs.writeFileSync(filePath, latestActivityId.toString());
-    console.log(`Latest activity ID: ${latestActivityId}`);
+    if (!username || !password) {
+      throw new Error("请设置 GARMIN_USERNAME 和 GARMIN_PASSWORD 环境变量");
+    }
+
+    // 初始化客户端
+    const client = new GarminConnect({ username, password });
+    await client.login(); // 登录 Garmin
+    console.log("Garmin login success");
+
+    // 获取最近一条活动，limit=1
+    const activities = await client.getActivities(0, 1);
+
+    if (!activities || activities.length === 0) {
+      console.log("No activities found");
+      process.exit(0);
+    }
+
+    const latest = activities[0];
+    const latestId = latest.activityId;
+
+    // 写入 latest.txt 文件
+    const filePath = path.join(__dirname, "..", "latest.txt");
+    fs.writeFileSync(filePath, latestId.toString());
+
+    console.log(`Latest activity ID: ${latestId}`);
   } catch (err) {
-    console.error("获取最新活动失败:", err);
+    console.error("Error fetching latest activity:", err.message);
     process.exit(1);
   }
 }
 
-fetchLatestActivityId();
+main();
